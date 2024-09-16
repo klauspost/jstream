@@ -67,6 +67,7 @@ func (kvs KVS) MarshalJSON() ([]byte, error) {
 type Decoder struct {
 	*scanner
 	emitDepth     int
+	maxDepth      int
 	emitKV        bool
 	emitRecursive bool
 	objectAsKVS   bool
@@ -136,6 +137,14 @@ func (d *Decoder) Pos() int { return int(d.pos) }
 
 // Err returns the most recent decoder error if any, or nil
 func (d *Decoder) Err() error { return d.err }
+
+// MaxDepth will set the maximum recursion depth.
+// If the maximum depth is exceeded, ErrMaxDepth is returned.
+// Less than or 0 means no limit (default).
+func (d *Decoder) MaxDepth(n int) *Decoder {
+	d.maxDepth = n
+	return d
+}
 
 // Decode parses the JSON-encoded data and returns an interface value
 func (d *Decoder) decode() {
@@ -417,6 +426,9 @@ func (d *Decoder) number() (float64, error) {
 // array accept valid JSON array value
 func (d *Decoder) array() ([]interface{}, error) {
 	d.depth++
+	if d.maxDepth > 0 && d.depth > d.maxDepth {
+		return nil, ErrMaxDepth
+	}
 
 	var (
 		c     byte
@@ -458,6 +470,9 @@ out:
 // object accept valid JSON array value
 func (d *Decoder) object() (map[string]interface{}, error) {
 	d.depth++
+	if d.maxDepth > 0 && d.depth > d.maxDepth {
+		return nil, ErrMaxDepth
+	}
 
 	var (
 		c   byte
@@ -543,6 +558,9 @@ out:
 // object (ordered) accept valid JSON array value
 func (d *Decoder) objectOrdered() (KVS, error) {
 	d.depth++
+	if d.maxDepth > 0 && d.depth > d.maxDepth {
+		return nil, ErrMaxDepth
+	}
 
 	var (
 		c   byte
